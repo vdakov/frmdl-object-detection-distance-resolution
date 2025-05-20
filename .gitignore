@@ -1,0 +1,4 @@
+# Add this to .gitignore if needed
+__pycache__/
+*.pt
+runs/
