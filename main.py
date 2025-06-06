@@ -1,5 +1,9 @@
-from data_processing.amplitudinal import amplitudinal_downsample
-from data_processing.spatial import spatial_downsample
+from data_processing.expand_dataset import expand_dataset
 
-amplitudinal_downsample("./data/example.jpg", 51)
-spatial_downsample("./data/example.jpg", 0.5)
+# Example usage: adjust paths and parameters as needed
+expand_dataset(
+    input_dir="./data",  # Directory with test images
+    output_dir="./output/expanded",  # Where to save the results
+    scale_factors=[0.5, 0.75],  # Example scale factors
+    qp_values=[20, 40],  # Example QP values
+)

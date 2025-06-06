@@ -1,12 +1,13 @@
 import os
 import subprocess
 from PIL import Image
+import tempfile
 
 
 def amplitudinal_downsample(input_path: str, qp: int) -> Image.Image:
     """
     Compresses and decompresses an image using BPG to reduce amplitude resolution.
-    Essentially, this function is a python wrapper around the BPG encoder and decoder.
+    This function uses temporary files for intermediate results.
 
     Args:
         input_path (str): Path to the input image.
@@ -15,21 +16,25 @@ def amplitudinal_downsample(input_path: str, qp: int) -> Image.Image:
     Returns:
         Image.Image: The decompressed image.
     """
-    # Set intermediate and output paths
-    bpg_path = input_path.replace(".png", f"_qp{qp}.bpg").replace(
-        ".jpg", f"_qp{qp}.bpg"
-    )
-    output_path = input_path.replace(".png", f"_qp{qp}_out.png").replace(
-        ".jpg", f"_qp{qp}_out.png"
-    )
+    with tempfile.NamedTemporaryFile(suffix=".bpg", delete=False) as bpg_tmp, \
+         tempfile.NamedTemporaryFile(suffix=".png", delete=False) as out_tmp:
+        bpg_path = bpg_tmp.name
+        output_path = out_tmp.name
 
-    # Perform BPG compression
-    subprocess.run(["bpgenc", "-q", str(qp), "-o", bpg_path, input_path], check=True)
+    try:
+        # Perform BPG compression
+        subprocess.run(
+            ["bpgenc", "-q", str(qp), "-o", bpg_path, input_path], check=True
+        )
 
-    # Perform BPG decompression
-    subprocess.run(["bpgdec", "-o", output_path, bpg_path], check=True)
+        # Perform BPG decompression
+        subprocess.run(["bpgdec", "-o", output_path, bpg_path], check=True)
 
-    # Clean up the intermediate BPG file
-    os.remove(bpg_path)
+        img = Image.open(output_path).copy()
+    finally:
+        if os.path.exists(bpg_path):
+            os.remove(bpg_path)
+        if os.path.exists(output_path):
+            os.remove(output_path)
 
-    return Image.open(output_path)
+    return img

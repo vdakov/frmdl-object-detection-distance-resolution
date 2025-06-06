@@ -26,7 +26,4 @@ def spatial_downsample(input_path: str, scale_factor: float) -> Image.Image:
     # Downsample using high-quality resampling
     downsampled_img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
 
-    # Save the downsampled image
-    downsampled_img.save(f"./output/downsampled_image_{str(scale_factor)}.png")
-
     return downsampled_img
