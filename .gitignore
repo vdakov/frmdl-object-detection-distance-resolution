@@ -2,3 +2,7 @@
 __pycache__/
 *.pt
 runs/
+
+.venv/
+data/
+output/
