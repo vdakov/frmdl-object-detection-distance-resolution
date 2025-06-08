@@ -23,7 +23,7 @@ onnx>=1.8.0
 onnxruntime>=1.8.0
 coremltools>=4.1
 nvidia-pyindex  # if using TensorRT
-nvidia-tensorrt  # if using TensorRT
+nvidia-tensorrt  # if using TensorRTEvaluation
 
 # Optional: Jupyter if you want notebook support
 jupyter
