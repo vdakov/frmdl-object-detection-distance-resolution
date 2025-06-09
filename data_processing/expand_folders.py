@@ -11,7 +11,7 @@ def expand_folders(main_folder):
     """
     if not os.path.exists(main_folder):
         raise ValueError(f"The specified folder does not exist: {main_folder}")
-    image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
+    image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".json"}
 
     for root, dirs, files in os.walk(main_folder):
         print(f"Processing folder: {root}")
