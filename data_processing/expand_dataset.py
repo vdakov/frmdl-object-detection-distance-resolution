@@ -3,6 +3,7 @@ from glob import glob
 import tempfile
 from data_processing.spatial import spatial_downsample
 from data_processing.amplitudinal import amplitudinal_downsample
+from tqdm import tqdm
 
 
 def expand_dataset(input_dir: str, output_dir: str, scale_factors: list, qp_values: list):
@@ -17,11 +18,9 @@ def expand_dataset(input_dir: str, output_dir: str, scale_factors: list, qp_valu
         None
     """
     os.makedirs(output_dir, exist_ok=True)
-    image_paths = glob(os.path.join(input_dir, "*.jpg")) + glob(
-        os.path.join(input_dir, "*.png")
-    )
+    image_paths = glob(os.path.join(input_dir, "*.jpg")) + glob(os.path.join(input_dir, "*.png"))
 
-    for img_path in image_paths:
+    for img_path in tqdm(image_paths, desc="Processing images"):
         base_name = os.path.splitext(os.path.basename(img_path))[0]
 
         # Only spatial downsampling
@@ -53,3 +52,4 @@ def expand_dataset(input_dir: str, output_dir: str, scale_factors: list, qp_valu
                     mixed_img.save(mixed_out_path)
             finally:
                 os.remove(temp_path)
+    print(f"Dataset expanded and saved to {output_dir}")
