@@ -2,10 +2,9 @@ import os
 import json
 
 # === Configuration ===
-json_dir = "../datasets/spatially_compressed/labels-json"  # JSON input
-labels_dir = "../datasets/spatially_compressed/labels"     # YOLO output
-images_dir = "../datasets/spatially_compressed/images"     # Images directory
-dataset_root = "../datasets/spatially_compressed"          # Root directory
+labels_dir = "../datasets/mixed/labels"     # YOLO output
+images_dir = "../datasets/mixed/img"     # Images directory
+dataset_root = "../datasets/mixed"          # Root directory
 
 train_img_dir = os.path.join(images_dir, "train")
 val_img_dir = os.path.join(images_dir, "val")
@@ -20,6 +19,9 @@ id_to_class = {v: k for k, v in class_map.items()}
 
 os.makedirs(train_lbl_dir, exist_ok=True)
 os.makedirs(val_lbl_dir, exist_ok=True)
+os.makedirs(train_img_dir, exist_ok=True)
+os.makedirs(val_img_dir, exist_ok=True)
+
 
 def convert_box(obj, img_w, img_h):
     x0, y0, x1, y1 = obj['x0'], obj['y0'], obj['x1'], obj['y1']
@@ -53,9 +55,17 @@ def convert_json_to_yolo(json_path, output_txt_path):
     if yolo_lines:
         with open(output_txt_path, 'w') as f:
             f.write('\n'.join(yolo_lines))
+            
+            
+def copy_image(src, dst):
+    if os.path.exists(src):
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(src, 'rb') as src_file:
+            with open(dst, 'wb') as dst_file:
+                dst_file.write(src_file.read())
 
 # === Split train/val (you can customize this logic) ===
-json_files = sorted([f for f in os.listdir(json_dir) if f.endswith('.json')])
+json_files = sorted([f for f in os.listdir(labels_dir) if f.endswith('.json')])
 split_index = int(0.8 * len(json_files))
 train_files = json_files[:split_index]
 val_files = json_files[split_index:]
@@ -63,10 +73,13 @@ val_files = json_files[split_index:]
 # === Process files ===
 for split, file_list, label_subdir in [('train', train_files, train_lbl_dir), ('val', val_files, val_lbl_dir)]:
     for fname in file_list:
-        json_path = os.path.join(json_dir, fname)
+        json_path = os.path.join(labels_dir, fname)
         base_name = os.path.splitext(fname)[0]
         label_path = os.path.join(label_subdir, base_name + ".txt")
         convert_json_to_yolo(json_path, label_path)
+        copy_image(os.path.join(images_dir, base_name + ".png"), 
+                    os.path.join(train_img_dir if split == 'train' else val_img_dir, base_name + ".png"))
+
 
 # === Write data.yaml ===
 data_yaml = f"""train: {os.path.abspath(train_img_dir)}
