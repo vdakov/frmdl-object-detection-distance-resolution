@@ -26,6 +26,10 @@ def spatial_downsample(input_path: str, label_path:str, label_values_to_scale:Li
     # Compute new size
     new_width = int(img.width * scale_factor)
     new_height = int(img.height * scale_factor)
+
+    new_width = new_width if new_width % 2 == 0 else new_width + 1
+    new_height = new_height if new_height % 2 == 0 else new_height + 1
+
     for label_key in label_values_to_scale:
         if label_key in label_dict.keys():
             label_dict[label_key] *= scale_factor
