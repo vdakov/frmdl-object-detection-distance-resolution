@@ -44,6 +44,10 @@ def convert_json_to_yolo(json_path, output_txt_path):
         label = obj.get('identity')
         if label not in class_map:
             continue
+        tags = obj.get("tags")
+        
+        if len(tags) > 0:
+            continue
 
         class_id = class_map[label]
         try:
@@ -55,6 +59,8 @@ def convert_json_to_yolo(json_path, output_txt_path):
     if yolo_lines:
         with open(output_txt_path, 'w') as f:
             f.write('\n'.join(yolo_lines))
+
+    return len(yolo_lines) > 0
             
             
 def copy_image(src, dst):
@@ -63,6 +69,7 @@ def copy_image(src, dst):
         with open(src, 'rb') as src_file:
             with open(dst, 'wb') as dst_file:
                 dst_file.write(src_file.read())
+                print(dst_file)
 
 # === Split train/val (you can customize this logic) ===
 json_files = sorted([f for f in os.listdir(labels_dir) if f.endswith('.json')])
@@ -76,9 +83,9 @@ for split, file_list, label_subdir in [('train', train_files, train_lbl_dir), ('
         json_path = os.path.join(labels_dir, fname)
         base_name = os.path.splitext(fname)[0]
         label_path = os.path.join(label_subdir, base_name + ".txt")
-        convert_json_to_yolo(json_path, label_path)
-        copy_image(os.path.join(images_dir, base_name + ".png"), 
-                    os.path.join(train_img_dir if split == 'train' else val_img_dir, base_name + ".png"))
+        if convert_json_to_yolo(json_path, label_path):
+            copy_image(os.path.join(images_dir, base_name + ".png"), 
+                        os.path.join(train_img_dir if split == 'train' else val_img_dir, base_name + ".png"))
 
 
 # === Write data.yaml ===
