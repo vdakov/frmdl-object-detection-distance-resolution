@@ -78,6 +78,8 @@ import tempfile
 from typing import List, Tuple
 from PIL import Image
 from concurrent.futures import ProcessPoolExecutor, as_completed
+
+from pathlib import Path
 from tqdm import tqdm
 
 from data_processing.amplitudinal import amplitudinal_downsample
@@ -90,9 +92,9 @@ from data_processing.spatial import spatial_downsample
 # --- Helper functions for multiprocessing ---
 
 # Function to encapsulate a single spatial task
-def _process_spatial_task(args: Tuple[str, str, List[str], float, str, str]) -> None:
+def _process_spatial_task(args: Tuple[str, str, List[str], float, str, str, str]) -> None:
     """Helper for spatial downsampling in parallel."""
-    img_path, label_path, label_values_to_scale, scale, output_img_dir, output_label_dir = args
+    img_path, label_path, label_values_to_scale, scale, output_img_dir, output_label_dir, metadata_dir = args
     base_name = os.path.splitext(os.path.basename(img_path))[0]
 
     spatial_img, label_dict = spatial_downsample(img_path, label_path, label_values_to_scale, scale)
@@ -102,25 +104,27 @@ def _process_spatial_task(args: Tuple[str, str, List[str], float, str, str]) -> 
         json.dump(label_dict, f)
 
 # Function to encapsulate a single amplitudinal task
-def _process_amplitudinal_task(args: Tuple[str, str, int, str, str]) -> None:
+def _process_amplitudinal_task(args: Tuple[str, str, int, str, str, str]) -> None:
     """Helper for amplitudinal downsampling in parallel."""
-    img_path, label_path, qp, output_img_dir, output_label_dir = args
+    img_path, label_path, qp, output_img_dir, output_label_dir, metadata_dir = args
     base_name = os.path.splitext(os.path.basename(img_path))[0]
 
     # Load label only once per image, as it's typically just copied for amplitude changes
     with open(label_path, 'r') as f:
         label_dict = json.load(f)
 
-    amp_img = amplitudinal_downsample(img_path, qp)
+    amp_img, image_size_mb, psnr = amplitudinal_downsample(img_path, qp)
     amp_out_path = os.path.join(output_img_dir, f"{base_name}_qp{qp}_out.png")
     amp_img.save(amp_out_path)
     with open(os.path.join(output_label_dir, f"{base_name}_qp{qp}.json"), 'w') as f:
         json.dump(label_dict, f)
+    with open(os.path.join(metadata_dir, f"{base_name}_qp{qp}.json"), 'w') as f:
+        json.dump({"image_size_mb": image_size_mb, "psnr": psnr}, f)
 
 # Function to encapsulate a single mixed task
-def _process_mixed_task(args: Tuple[str, str, List[str], float, int, str, str]) -> None:
+def _process_mixed_task(args: Tuple[str, str, List[str], float, int, str, str, str]) -> None:
     """Helper for mixed (spatial then amplitudinal) downsampling in parallel."""
-    img_path, label_path, label_values_to_scale, scale, qp, output_img_dir, output_label_dir = args
+    img_path, label_path, label_values_to_scale, scale, qp, output_img_dir, output_label_dir, metadata_dir = args
     base_name = os.path.splitext(os.path.basename(img_path))[0]
 
     spatial_img, label_dict = spatial_downsample(img_path, label_path, label_values_to_scale, scale)
@@ -129,11 +133,13 @@ def _process_mixed_task(args: Tuple[str, str, List[str], float, int, str, str]) 
         temp_path = tmp.name
         spatial_img.save(temp_path) # Save spatial output to temp file for BPG input
     try:
-        mixed_img = amplitudinal_downsample(temp_path, qp)
+        mixed_img, image_size_mb, psnr = amplitudinal_downsample(temp_path, qp)
         mixed_out_path = os.path.join(output_img_dir, f"{base_name}_spatial_{scale:.2f}_qp{qp}.png")
         mixed_img.save(mixed_out_path)
         with open(os.path.join(output_label_dir, f"{base_name}_spatial_{scale:.2f}_qp{qp}.json"), 'w') as f:
             json.dump(label_dict, f)
+        with open(os.path.join(metadata_dir, f"{base_name}_spatial_{scale:.2f}_qp{qp}.json"), 'w') as f:
+            json.dump({"image_size_mb": image_size_mb, "psnr": psnr}, f)
     finally:
         if os.path.exists(temp_path): # Ensure temp file exists before trying to remove
             os.remove(temp_path)
@@ -148,6 +154,7 @@ def expand_dataset(
     output_label_dir: str,
     scale_factors: list,
     qp_values: list,
+    metadata_dir: str = None,
     expansion: str = "spatial",
     subsample_spatial: bool = True,
     subsample_amplitudinal: bool = True
@@ -171,6 +178,16 @@ def expand_dataset(
     os.makedirs(output_img_dir, exist_ok=True)
     os.makedirs(output_label_dir, exist_ok=True)
 
+    if metadata_dir is not None:
+        os.makedirs(metadata_dir, exist_ok=True)
+
+    input_dir = str(Path(input_dir).resolve().absolute())
+    label_dir = str(Path(label_dir).resolve().absolute())
+    output_img_dir = str(Path(output_img_dir).resolve().absolute())
+    output_label_dir = str(Path(output_label_dir).resolve().absolute())
+    if metadata_dir is not None:
+        metadata_dir = str(Path(metadata_dir).resolve().absolute())
+
     image_paths = sorted(glob(os.path.join(input_dir, "*.jpg")) + glob(os.path.join(input_dir, "*.png")))
     label_paths = sorted(glob(os.path.join(label_dir, "*.json")))
 
@@ -187,47 +204,47 @@ def expand_dataset(
         if not subsample_spatial:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 for scale in scale_factors:
-                    tasks.append((img_path, label_path, label_values_to_scale, scale, output_img_dir, output_label_dir))
-        else: 
+                    tasks.append((img_path, label_path, label_values_to_scale, scale, output_img_dir, output_label_dir, metadata_dir))
+        else:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 scale_factor_index = int(i // (len(image_paths) // len(scale_factors)))
-                tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], output_img_dir, output_label_dir))
+                tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], output_img_dir, output_label_dir, metadata_dir))
         process_func = _process_spatial_task
 
     elif expansion == "amplitudinal":
         task_description = "Processing amplitudinal downsampling"
         for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
             for qp in qp_values:
-                tasks.append((img_path, label_path, qp, output_img_dir, output_label_dir))
+                tasks.append((img_path, label_path, qp, output_img_dir, output_label_dir, metadata_dir))
         process_func = _process_amplitudinal_task
 
     elif expansion == "mixed":
         task_description = "Processing mixed (spatial & amplitudinal) downsampling"
 
         if subsample_amplitudinal and subsample_spatial:
-            scale_factor_index = 0 
+            scale_factor_index = 0
             qp_index = 0
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 scale_factor_index = scale_factor_index % len(scale_factors)
                 qp_index = qp_index % len(qp_values)
-                tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], qp_values[qp_index], output_img_dir, output_label_dir))
+                tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], qp_values[qp_index], output_img_dir, output_label_dir, metadata_dir))
                 scale_factor_index += 1
                 qp_index += 1
         elif subsample_amplitudinal:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                qp_index = int(i // (len(image_paths) // len(qp_values)))
                for scale in scale_factors:
-                    tasks.append((img_path, label_path, label_values_to_scale, scale, qp_values[qp_index], output_img_dir, output_label_dir))
+                    tasks.append((img_path, label_path, label_values_to_scale, scale, qp_values[qp_index], output_img_dir, output_label_dir, metadata_dir))
         elif subsample_spatial:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 scale_factor_index = int(i // (len(image_paths) // len(scale_factors)))
                 for qp_index in range(len(qp_values)):
-                    tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], qp_values[qp_index], output_img_dir, output_label_dir))
-        else: 
+                    tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], qp_values[qp_index], output_img_dir, output_label_dir, metadata_dir))
+        else:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 for scale in scale_factors:
                     for qp in qp_values:
-                        tasks.append((img_path, label_path, label_values_to_scale, scale, qp, output_img_dir, output_label_dir))
+                        tasks.append((img_path, label_path, label_values_to_scale, scale, qp, output_img_dir, output_label_dir, metadata_dir))
         process_func = _process_mixed_task
 
     else:

@@ -2,6 +2,7 @@ import os
 import subprocess
 from PIL import Image
 import tempfile
+import numpy as np
 
 
 def amplitudinal_downsample(input_path: str, qp: int) -> Image.Image:
@@ -30,11 +31,26 @@ def amplitudinal_downsample(input_path: str, qp: int) -> Image.Image:
         # Perform BPG decompression
         subprocess.run(["bpgdec", "-o", output_path, bpg_path], check=True)
 
-        img = Image.open(output_path).copy()
+        input_img = Image.open(input_path)
+        output_img = Image.open(output_path).copy()
+
+        image_size_mb = compute_mb_per_image(bpg_path)
+        psnr = compute_PSNR(input_img, output_img)
+
     finally:
         if os.path.exists(bpg_path):
             os.remove(bpg_path)
         if os.path.exists(output_path):
             os.remove(output_path)
 
-    return img
+    return output_img, image_size_mb, psnr
+
+
+def compute_mb_per_image(file_path_compressed):
+    return os.path.getsize(file_path_compressed) / (1024**2)
+
+
+def compute_PSNR(file_original, file_decompressed):
+    mse = max(float(np.mean((np.array(file_original) - np.array(file_decompressed)) ** 2)), 1e-8)
+    psnr = 10 * np.log10(255**2 / mse)
+    return psnr.item()
