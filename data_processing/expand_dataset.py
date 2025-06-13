@@ -182,25 +182,27 @@ def expand_dataset(
                 scale_factor_index += 1
                 qp_index += 1
         elif subsample_amplitudinal:
+            qp_index = 0
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
 
                 assert Path(label_path).stem in Path(img_path).stem, "Image and label file names must match."
-                qp_index = int(i // (len(image_paths) // len(qp_values)))
+                qp_index = qp_index % len(qp_values)
                 for scale in scale_factors:
                     tasks.append((img_path, label_path, label_values_to_scale, scale, qp_values[qp_index], output_img_dir, output_label_dir, metadata_dir))
         elif subsample_spatial:
+            scale_factor_index = 0 
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
 
                 assert Path(label_path).stem in Path(img_path).stem, "Image and label file names must match."
-
-
-                scale_factor_index = int(i // (len(image_paths) // len(scale_factors)))
+                
+                
+                scale_factor_index = scale_factor_index % len(scale_factors)
                 for qp_index in range(len(qp_values)):
                     tasks.append((img_path, label_path, label_values_to_scale, scale_factors[scale_factor_index], qp_values[qp_index], output_img_dir, output_label_dir, metadata_dir))
         else:
