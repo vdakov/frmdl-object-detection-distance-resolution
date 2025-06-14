@@ -1,5 +1,6 @@
 import os
 import json
+from tqdm import tqdm
 
 
 # === Class map ===
@@ -88,7 +89,7 @@ def to_yolo_format(labels_dir, images_dir, dataset_root, split=0.8):
 
     # === Process files ===
     for split, file_list, label_subdir in [('train', train_files, train_lbl_dir), ('val', val_files, val_lbl_dir)]:
-        for fname in file_list:
+        for fname in tqdm(file_list, desc=f"{split} progress"):
             json_path = os.path.join(labels_dir, fname)
             base_name = os.path.splitext(fname)[0]
             label_path = os.path.join(label_subdir, base_name + ".txt")
