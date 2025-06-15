@@ -20,8 +20,25 @@ def convert_box(obj, img_w, img_h):
     return x_center, y_center, width, height
 
 def convert_json_to_yolo(json_path, output_txt_path):
-    with open(json_path, 'r') as f:
-        data = json.load(f)
+    
+    if not os.path.isfile(json_path):
+        print(f"[Warning] File does not exist: {json_path}")
+        return False
+
+    # Check for empty file
+    if os.path.getsize(json_path) == 0:
+        print(f"[Warning] Empty JSON file: {json_path}")
+        return False
+    
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[Error] Failed to decode JSON in {json_path}: {e}")
+        return False
+    except Exception as e:
+        print(f"[Error] Unexpected error reading {json_path}: {e}")
+        return False
 
     img_w = data.get('imagewidth')
     img_h = data.get('imageheight')
@@ -105,11 +122,7 @@ def to_yolo_format(labels_dir, images_dir, dataset_root, split=0.8):
 
 
     # === Write data.yaml ===
-    data_yaml = f"""train: {os.path.abspath(train_img_dir)}
-    val: {os.path.abspath(val_img_dir)}
-
-    nc: {len(class_map)}
-    names: {list(class_map.keys())}
+    data_yaml = f"""train: {os.path.abspath(train_img_dir)}\nval: {os.path.abspath(val_img_dir)}\n\nnc: {len(class_map)}\nnames: {list(class_map.keys())}
     """
 
     with open(os.path.join(dataset_root, "data.yaml"), "w") as f:
