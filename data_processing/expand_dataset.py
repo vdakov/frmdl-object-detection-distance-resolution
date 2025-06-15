@@ -87,6 +87,7 @@ def expand_dataset(
     subsample_spatial: bool = True,
     subsample_amplitudinal: bool = True,
     cpu_count = 5,
+    num_images = None,
 ):
     """
     Expands the dataset by applying spatial and amplitudinal downsampling to images,
@@ -122,6 +123,9 @@ def expand_dataset(
 
     zipped = match_images_labels(image_paths, label_paths, partial_match=True)
     image_paths, label_paths = zip(*zipped) if zipped else ([], [])
+    
+    if num_images is None: 
+        num_images = len(image_paths)
 
 
     tasks = []
@@ -132,6 +136,8 @@ def expand_dataset(
         task_description = "Processing spatial downsampling"
         if not subsample_spatial:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+                if i >= num_images - 1:
+                    break
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
@@ -142,6 +148,8 @@ def expand_dataset(
                     tasks.append((img_path, label_path, label_values_to_scale, scale, output_img_dir, output_label_dir, metadata_dir))
         else:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+                if i >= num_images - 1:
+                    break
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
@@ -154,6 +162,8 @@ def expand_dataset(
     elif expansion == "amplitudinal":
         task_description = "Processing amplitudinal downsampling"
         for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+            if i >= num_images - 1:
+                break
             if not Path(label_path).stem in Path(img_path).stem:
                 print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                 continue
@@ -170,6 +180,8 @@ def expand_dataset(
             scale_factor_index = 0
             qp_index = 0
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+                if i >= num_images - 1:
+                    break
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
@@ -184,6 +196,8 @@ def expand_dataset(
         elif subsample_amplitudinal:
             qp_index = 0
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+                if i >= num_images - 1:
+                    break
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
@@ -196,6 +210,8 @@ def expand_dataset(
         elif subsample_spatial:
             scale_factor_index = 0 
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+                if i >= num_images - 1:
+                    break
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
                     continue
@@ -209,6 +225,8 @@ def expand_dataset(
                 scale_factor_index += 1
         else:
             for i, (img_path, label_path) in enumerate(zip(image_paths, label_paths)):
+                if i >= num_images - 1:
+                    break
 
                 if not Path(label_path).stem in Path(img_path).stem:
                     print(f"Warning: Image {img_path} and label {label_path} do not match. Skipping this pair.")
