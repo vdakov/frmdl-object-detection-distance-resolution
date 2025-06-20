@@ -56,9 +56,9 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
         pred_bboxes = [(pred['bbox'], pred.get('score', 1.0)) for pred in curr_preds]
 
         matched_pred_indices = set()  # Track indices of matched predictions
-
+        matched_gt_indices = set()
         # Process ground truths
-        for gt_bbox in gt_bboxes:
+        for j, gt_bbox in enumerate(gt_bboxes):
             matched = False
             for i, pred_bbox in enumerate(pred_bboxes):
                 bbox, score = pred_bbox
@@ -66,6 +66,7 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
                     continue  # Skip already matched predictions
                 iou = calculate_iou(bbox, gt_bbox[:4])
                 if iou > iou_threshold:
+                    matched_gt_indices.add(j)
                     matched_pred_indices.add(i)
                     matched = True
                     rows.append({
@@ -78,12 +79,30 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
                         'distance': calculate_distance_to_gt(gt_bbox),
                         'tp': 1,
                         'fp': 0,
+                        'fn': 0,
                         'confidence': score,
                         'iou': calculate_iou(bbox, gt_bbox[:4]),
                         'label': 'gt',
                     })
                     break  # Stop after first match
-
+        for j, gt_bbox in enumerate(gt_bboxes):
+            if j in matched_gt_indices:
+                continue
+            rows.append({
+                    'image_id': im_name,
+                    'spatial_res': spatial_res,
+                    'amplitudal_res': amplitudal_res,
+                    'image_size_mb': size_mb,
+                    'psnr': psnr,
+                    # Takes norm of LIDAR position vector relative to camera
+                    'distance': calculate_distance_to_gt(gt_bbox),
+                    'tp': 0,
+                    'fp': 0,
+                    'fn':1,
+                    'confidence': 0,
+                    'iou': 0,
+                    'label': 'gt',
+                })
         # Process unmatched predictions (false positives)
         for i, _ in enumerate(pred_bboxes):
             if i not in matched_pred_indices:
@@ -96,6 +115,7 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
                     'distance': 0,
                     'tp': 0,
                     'fp': 1,
+                    'fn': 0,
                     'confidence': score,
                     'iou': 0,
                     'label': 'pred',

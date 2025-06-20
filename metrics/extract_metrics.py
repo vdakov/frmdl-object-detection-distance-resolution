@@ -79,3 +79,30 @@ def compute_map50(df, plot=True):
         plt.show()
     
     return ap
+
+def compute_recall(df, plot=True):
+    df_preds = df.copy()
+    # Filter only rows that are either TP or FP
+    detection_df = df_preds[df_preds['tp'] + df_preds['fp'] > 0]
+
+    # Sort by confidence descending
+    detection_df = detection_df.sort_values(by='confidence', ascending=False).reset_index(drop=True)
+
+    # Cumulative TP/FP
+    detection_df['cum_tp'] = detection_df['tp'].cumsum()
+    detection_df['cum_fp'] = detection_df['fp'].cumsum()
+
+    # Total ground truths
+    total_gt = df[df['label'] == 'gt'].shape[0]
+
+
+    # Precision and Recall
+    detection_df['precision'] = detection_df['cum_tp'] / (detection_df['cum_tp'] + detection_df['cum_fp'])\
+        if df_preds.shape[0] > 0 else 0.0
+    detection_df['recall'] = detection_df['cum_tp'] / total_gt\
+        if total_gt > 0 else 0.0
+
+    # Interpolate and calculate AP as area under the curve
+    recall = detection_df['recall'].values
+
+    return recall
