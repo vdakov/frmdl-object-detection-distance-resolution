@@ -31,7 +31,7 @@ def calculate_iou(bbox1, bbox2):
     return iou
 
 def calculate_distance_to_gt(label):
-    xyz = label[4]
+    xyz = label
     x, y, z = xyz["x"], xyz["y"], xyz["z"]
 
     return (x**2 + y**2 + z**2)**0.5 if x is not None and y is not None and z is not None else 0.0
