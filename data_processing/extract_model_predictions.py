@@ -67,7 +67,6 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
                     continue  # Skip already matched predictions
                 iou = calculate_iou(bbox, gt_bbox[:4])
                 if iou > iou_threshold:
-                    print("check 3")
                     matched_pred_indices.add(i)
                     matched = True
                     rows.append({

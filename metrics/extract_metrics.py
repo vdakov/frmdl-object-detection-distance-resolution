@@ -28,12 +28,6 @@ def calculate_iou(bbox1, bbox2):
 
     iou = intersection_area / union_area if union_area != 0 else 0.0
 
-    if iou > 0.3:
-        print("pred", [x0_pred, y0_pred, x1_pred, y1_pred])
-        print("gt", [x0_gt, y0_gt, x1_gt, y1_gt])
-        print("intersection box", [x0_inter, y0_inter, x1_inter, y1_inter])
-        print("intersection area", intersection_area)
-
     return iou
 
 def calculate_distance_to_gt(label):
