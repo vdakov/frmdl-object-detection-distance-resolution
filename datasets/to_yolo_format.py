@@ -51,8 +51,8 @@ def convert_json_to_yolo(json_path, output_txt_path):
             continue
         tags = obj.get("tags")
         
-        # if len(tags) > 0:
-        #     continue
+        if len(tags) > 0:
+            continue
 
         class_id = class_map[label]
         try:
