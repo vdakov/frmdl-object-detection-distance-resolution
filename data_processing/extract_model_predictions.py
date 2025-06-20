@@ -34,8 +34,8 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
 
         # Extract resolutions from filename
         parts = im_name.split('_')
-        spatial_res = parts[5]
-        amp_val = parts[6][2:].split('.')[0]  # Handle file extensions
+        spatial_res = parts[6]
+        amp_val = parts[7][2:].split('.')[0]  # Handle file extensions
         amplitudal_res = int(amp_val) if amp_val != '' else 0
 
         # Collect image size
