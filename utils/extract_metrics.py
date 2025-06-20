@@ -44,12 +44,14 @@ def compute_map50(df, plot=True):
     detection_df['cum_fp'] = detection_df['fp'].cumsum()
     
     # Total ground truths   
-    total_gt = df[df['label'] == 'gt'].shape[0] + 1e-10
+    total_gt = df[df['label'] == 'gt'].shape[0]
     
     
     # Precision and Recall
-    detection_df['precision'] = detection_df['cum_tp'] / (detection_df['cum_tp'] + detection_df['cum_fp'])
-    detection_df['recall'] = detection_df['cum_tp'] / total_gt
+    detection_df['precision'] = detection_df['cum_tp'] / (detection_df['cum_tp'] + detection_df['cum_fp'])\
+        if df_preds.shape[0] > 0 else 0.0
+    detection_df['recall'] = detection_df['cum_tp'] / total_gt\
+        if total_gt > 0 else 0.0
     
     # Interpolate and calculate AP as area under the curve
     precision = detection_df['precision'].values
@@ -59,7 +61,7 @@ def compute_map50(df, plot=True):
     
     if plot:
         plt.figure(figsize=(6, 5))
-        plt.plot(recall, precision, marker='.', label=f'AP@50 = {ap:.4f}')
+        plt.plot(recall, precision, marker='.', label=f'mAP@50 = {ap:.4f}')
         plt.xlim([0, 1])
         plt.ylim([0, 1])
         plt.xlabel('Recall')
