@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from tqdm import tqdm
 
-from utils.extract_metrics import calculate_distance_to_gt, calculate_iou
+from metrics.extract_metrics import calculate_distance_to_gt, calculate_iou
 
 
 def extract_predictions_from_run(json_path, label_dir=None):
@@ -57,7 +57,7 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
 
         
         matched_pred_indices = set()  # Track indices of matched predictions
-        
+
         # Process ground truths
         for gt_bbox in gt_bboxes:
             matched = False
@@ -65,21 +65,23 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
                 bbox, score = pred_bbox
                 if i in matched_pred_indices:
                     continue  # Skip already matched predictions
-                if calculate_iou(bbox, gt_bbox[:4]) > iou_threshold:
+                iou = calculate_iou(bbox, gt_bbox[:4])
+                if iou > iou_threshold:
+                    print("check 3")
                     matched_pred_indices.add(i)
                     matched = True
                     rows.append({
                         'image_id': im_name,
-                        'distance': calculate_distance_to_gt(gt_bbox),
                         'spatial_res': spatial_res,
                         'amplitudal_res': amplitudal_res,
-                        'distance_to_gt': 0,
                         'image_size_mb': size_mb,
                         'psnr': psnr,
+                        # Takes norm of LIDAR position vector relative to camera
+                        'distance': calculate_distance_to_gt(gt_bbox),
                         'tp': 1,
                         'fp': 0,
-                        'fn': 0,
                         'confidence': score,
+                        'iou': calculate_iou(bbox, gt_bbox[:4]),
                         'label': 'gt',
                     }) 
                     break  # Stop after first match
@@ -91,15 +93,14 @@ def create_predictions_dataframe(predictions, labels, metadata_dir, iou_threshol
                 bbox, score = pred_bboxes[i]
                 rows.append({
                     'image_id': im_name,
-                    'distance': 0,
                     'spatial_res': spatial_res,
                     'amplitudal_res': amplitudal_res,
-                    'distance_to_gt': 0,
                     'image_size_mb': size_mb,
+                    'distance': 0,
                     'tp': 0,
                     'fp': 1,
-                    'fn': 0,
                     'confidence': score,
+                    'iou': 0,
                     'label': 'pred',
                 })
 

@@ -3,10 +3,14 @@ from sklearn.metrics import auc
 
 
 def calculate_iou(bbox1, bbox2):
-    # Existing IoU calculation remains unchanged
-    x0_pred, y0_pred, x1_pred, y1_pred = bbox1
+    # Converting XYWH to XYXY for the predictions
+    x0_pred = bbox1[0] - bbox1[2]/2
+    y0_pred = bbox1[1] - bbox1[3]/2
+    x1_pred = bbox1[0] + bbox1[2]/2
+    y1_pred = bbox1[1] + bbox1[3]/2
+
     x0_gt, y0_gt, x1_gt, y1_gt = bbox2
-    
+
     
     x0_inter = max(x0_pred, x0_gt)
     y0_inter = max(y0_pred, y0_gt)
@@ -21,8 +25,16 @@ def calculate_iou(bbox1, bbox2):
     area_pred = (x1_pred - x0_pred) * (y1_pred - y0_pred)
     area_gt = (x1_gt - x0_gt) * (y1_gt - y0_gt)
     union_area = area_pred + area_gt - intersection_area
-    
-    return intersection_area / union_area if union_area != 0 else 0.0
+
+    iou = intersection_area / union_area if union_area != 0 else 0.0
+
+    if iou > 0.3:
+        print("pred", [x0_pred, y0_pred, x1_pred, y1_pred])
+        print("gt", [x0_gt, y0_gt, x1_gt, y1_gt])
+        print("intersection box", [x0_inter, y0_inter, x1_inter, y1_inter])
+        print("intersection area", intersection_area)
+
+    return iou
 
 def calculate_distance_to_gt(label):
     xyz = label[4]
